@@ -1,16 +1,18 @@
 import os
 import torch
 import time
+import numpy as np
 from tqdm import tqdm
-from opts import parse_opts
-from core.dataset import MMDataLoader
+from opts import get_args
+from core.dataset import Dataset
+from sklearn.model_selection import StratifiedKFold
 from core.scheduler import get_scheduler
 from core.utils import AverageMeter, setup_seed, ConfigLogging, save_print_results, calculate_u_test
 from models.OverallModal import build_model
 from core.metric import MetricsTop
 
 
-opt = parse_opts()
+opt = get_args()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -100,8 +102,8 @@ def test(model, test_loader, optimizer, loss_fn, epoch, metrics):
             })
 
         pred, true = torch.cat(y_pred), torch.cat(y_true)
-        if epoch == 11:
-            calculate_u_test(pred, true)
+        # if epoch == 11:
+        #     calculate_u_test(pred, true)
         test_results = metrics(pred, true)
 
     return test_results
@@ -118,23 +120,40 @@ def main(parse_args):
     logger.info(opt)    # 保存当前模型参数
 
     setup_seed(opt.seed)
-    dataLoader = MMDataLoader(opt)
-    model = build_model(opt).to(device)
-    optimizer = torch.optim.AdamW(
-        model.parameters(),
-        lr=opt.lr,
-        weight_decay=opt.weight_decay
-    )
+    dataset = Dataset(opt.datasetName, opt.labelType)
 
-    loss_fn = torch.nn.MSELoss()
-    metrics = MetricsTop().getMetics(opt.datasetName)
-    scheduler_warmup = get_scheduler(optimizer, opt.n_epochs)
+    Avg_Accuracy = []
+    Avg_F1_score = []
+    kf = StratifiedKFold(n_splits=5, shuffle=True)
+    for train_index, test_index in kf.split(dataset['data'], dataset['label']):
+        X_train = torch.tensor(np.array(dataset['data'])[train_index], dtype=torch.float32)
+        Y_train = torch.tensor(np.array(dataset['label'])[train_index])
 
-    for epoch in range(1, opt.n_epochs+1):
-        train_results = train(model, dataLoader['train'], optimizer, loss_fn, epoch, metrics)
-        test_results = test(model, dataLoader['test'], optimizer, loss_fn, epoch, metrics)
-        save_print_results(opt, logger, train_results, test_results)
-        scheduler_warmup.step()
+        X_test = torch.tensor(np.array(dataset['data'])[test_index], dtype=torch.float32)
+        Y_test = torch.tensor(np.array(dataset['label'])[test_index])
+
+        model = build_model(opt).to(device)
+        optimizer = torch.optim.AdamW(
+            model.parameters(),
+            lr=opt.lr,
+            weight_decay=opt.weight_decay
+        )
+
+        loss_fn = torch.nn.CrossEntropyLoss()
+        metrics = MetricsTop().getMetics(opt.datasetName)
+        scheduler_warmup = get_scheduler(optimizer, opt.n_epochs)
+
+        for epoch in range(1, opt.n_epochs+1):
+            train_results = train(model, [X_train, Y_train], optimizer, loss_fn, epoch, metrics)
+            test_results = test(model, [X_test, Y_test], optimizer, loss_fn, epoch, metrics)
+            save_print_results(opt, logger, train_results, test_results)
+            scheduler_warmup.step()
+
+        Avg_Accuracy.append()
+        Avg_F1_score.append()
+
+    print("mean acc:", np.array(Avg_Accuracy).mean())
+    print("mean f1:", np.array(Avg_F1_score).mean())
 
 
 if __name__ == '__main__':

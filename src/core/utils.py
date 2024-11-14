@@ -3,7 +3,6 @@ import logging
 import random
 import numpy as np
 import torch
-import torch.nn.functional as F
 from tabulate import tabulate
 from scipy import stats
 
@@ -76,13 +75,12 @@ def save_model(save_path, result, modality, model):
 
 
 def save_print_results(opt, logger, train_re, valid_re, test_re):
-    if opt.datasetName in ['mosi', 'mosei']:
+    if opt.datasetName in ['emotake']:
         results = [
-            ["Train", train_re["MAE"], train_re["Corr"], train_re["Mult_acc_7"], train_re["Has0_acc_2"], train_re["Non0_acc_2"], train_re["Has0_F1_score"], train_re["Non0_F1_score"]],
-            ["Valid", valid_re["MAE"], valid_re["Corr"], valid_re["Mult_acc_7"], valid_re["Has0_acc_2"], valid_re["Non0_acc_2"], valid_re["Has0_F1_score"], valid_re["Non0_F1_score"]],
-            ["Test", test_re["MAE"], test_re["Corr"], test_re["Mult_acc_7"], test_re["Has0_acc_2"], test_re["Non0_acc_2"], test_re["Has0_F1_score"], test_re["Non0_F1_score"]]
+            ["Train", train_re["Accuracy"], train_re["F1-Score"]],
+            ["Test", test_re["Accuracy"], test_re["F1-Score"]]
         ]
-        headers = ["Phase", "MAE", "Corr", "Acc-7", "Acc-2", "Acc-2-N0", "F1", "F1-N0"]
+        headers = ["Phase", "Accuracy", "F1-Score"]
 
         table = '\n' + tabulate(results, headers, tablefmt="grid") + '\n'
         logger.info(table.replace('\n', '\n\n'))
@@ -99,19 +97,6 @@ def save_print_results(opt, logger, train_re, valid_re, test_re):
             logger.info(table.replace('\n', '\n\n'))
         else:
             print(table)
-
-
-def calculate_ratio_senti(uni_senti, multi_senti, k=2.):
-    ratio = {}
-    for m in ['T', 'V', 'A']:
-        uni_senti[m] = torch.exp(-1 * k * torch.pow(torch.abs(uni_senti[m] - multi_senti), 2))
-
-    # 进行归一化
-    for m in ['T', 'V', 'A']:
-        ratio[m] = uni_senti[m] / (uni_senti['T'] + uni_senti['V'] + uni_senti['A'])
-        ratio[m] = ratio[m].unsqueeze(-1)
-
-    return ratio
 
 
 def calculate_u_test(pred, label):
