@@ -120,7 +120,7 @@ def main(parse_args):
     logger.info(opt)    # 保存当前模型参数
 
     setup_seed(opt.seed)
-    dataset = Dataset(opt.datasetName, opt.labelType)
+    dataset = Dataset(opt.datasetName, opt.labelType).d_l
 
     Avg_Accuracy = []
     Avg_F1_score = []
@@ -135,15 +135,15 @@ def main(parse_args):
         model = build_model(opt).to(device)
         optimizer = torch.optim.AdamW(
             model.parameters(),
-            lr=opt.lr,
+            lr=opt.learning_rate,
             weight_decay=opt.weight_decay
         )
 
         loss_fn = torch.nn.CrossEntropyLoss()
         metrics = MetricsTop().getMetics(opt.datasetName)
-        scheduler_warmup = get_scheduler(optimizer, opt.n_epochs)
+        scheduler_warmup = get_scheduler(optimizer, opt.epochs)
 
-        for epoch in range(1, opt.n_epochs+1):
+        for epoch in range(1, opt.epochs+1):
             train_results = train(model, [X_train, Y_train], optimizer, loss_fn, epoch, metrics)
             test_results = test(model, [X_test, Y_test], optimizer, loss_fn, epoch, metrics)
             save_print_results(opt, logger, train_results, test_results)

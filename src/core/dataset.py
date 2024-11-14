@@ -8,7 +8,7 @@ class Dataset():
             'other': None
         }
         data, label = DATA_MAP[datasetNmae](labelType)
-        self.dataset = {'data': data, 'label': label}
+        self.d_l = {'data': data, 'label': label}
 
     def __init_emotake(self, labelType):
         au_data = np.load('data/aus.npy').transpose(0, 2, 1)

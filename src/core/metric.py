@@ -6,7 +6,7 @@ from sklearn.metrics import f1_score
 class MetricsTop():
     def __init__(self):
         self.metrics_dict = {
-            'emotake': self.eval_emotake,
+            'EMOTAKE': self.eval_emotake,
             'other': None
         }
 
