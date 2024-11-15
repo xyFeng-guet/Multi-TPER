@@ -74,7 +74,7 @@ def save_model(save_path, result, modality, model):
     torch.save(model.state_dict(), save_file_path)
 
 
-def save_print_results(opt, logger, train_re, valid_re, test_re):
+def save_print_results(opt, logger, train_re, test_re):
     if opt.datasetName in ['emotake']:
         results = [
             ["Train", train_re["Accuracy"], train_re["F1-Score"]],
@@ -87,7 +87,6 @@ def save_print_results(opt, logger, train_re, valid_re, test_re):
     else:
         results = [
             ["Train", train_re["MAE"], train_re["Corr"], train_re["Mult_acc_2"], train_re["Mult_acc_3"], train_re["Mult_acc_5"], train_re["F1_score"]],
-            ["Valid", valid_re["MAE"], valid_re["Corr"], valid_re["Mult_acc_2"], valid_re["Mult_acc_3"], valid_re["Mult_acc_5"], valid_re["F1_score"]],
             ["Test", test_re["MAE"], test_re["Corr"], test_re["Mult_acc_2"], test_re["Mult_acc_3"], test_re["Mult_acc_5"], test_re["F1_score"]]
         ]
         headers = ["Phase", "MAE", "Corr", "Acc-2", "Acc-3", "Acc-5", "F1"]

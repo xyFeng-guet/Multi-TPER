@@ -26,19 +26,18 @@ def train(opt, model, dataset, optimizer, loss_fn, epoch, metrics):
 
     for data in train_pbar:
         inputs = {
-            'V': data['vision'].to(device),
-            'A': data['audio'].to(device),
-            'T': data['text'].to(device),
+            'au': data['au'].to(device),
+            'em': data['em'].to(device),
+            'hp': data['hp'].to(device),
+            'bp': data['bp'].to(device)
         }
-        label = data['labels']['M'].to(device)
-        label = label.view(-1, 1)
-        copy_label = label.clone().detach()
-        batchsize = inputs['V'].shape[0]
+        label = data['label'].to(device)
+        batchsize = inputs['au'].shape[0]
 
-        output, nce_loss = model(inputs, copy_label)
+        output = model(inputs)
 
-        loss_re = loss_fn(output, label)
-        loss = loss_re + 0.1 * nce_loss
+        loss_cla = loss_fn(output, label)
+        loss = loss_cla
         losses.update(loss.item(), batchsize)
         loss.backward()
 
@@ -61,35 +60,32 @@ def train(opt, model, dataset, optimizer, loss_fn, epoch, metrics):
     return train_results
 
 
-def test(opt, model, test_loader, optimizer, loss_fn, epoch, metrics):
-    test_pbar = tqdm(test_loader)
+def test(opt, model, dataset, optimizer, loss_fn, epoch, metrics):
+    dataLoader = create_DataLoader(opt, dataset)
+    test_pbar = tqdm(dataLoader)
+
     losses = AverageMeter()
     y_pred, y_true = [], []
-
     model.eval()
+
     with torch.no_grad():
         for data in test_pbar:
             inputs = {
-                'V': data['vision'].to(device),
-                'A': data['audio'].to(device),
-                'T': data['text'].to(device),
-                'mask': {
-                    'V': data['vision_padding_mask'][:, 1:data['vision'].shape[1]+1].to(device),
-                    'A': data['audio_padding_mask'][:, 1:data['audio'].shape[1]+1].to(device),
-                    'T': []
-                }
+                'au': data['au'].to(device),
+                'em': data['em'].to(device),
+                'hp': data['hp'].to(device),
+                'bp': data['bp'].to(device)
             }
-            # ids = data['id']
-            label = data['labels']['M'].to(device)
-            label = label.view(-1, 1)
-            batchsize = inputs['V'].shape[0]
+            label = data['label'].to(device)
+            batchsize = inputs['au'].shape[0]
 
-            output, _ = model(inputs, None)
-            y_pred.append(output.cpu())
-            y_true.append(label.cpu())
+            output = model(inputs)
 
             loss = loss_fn(output, label)
             losses.update(loss.item(), batchsize)
+
+            y_pred.append(output.cpu())
+            y_true.append(label.cpu())
 
             test_pbar.set_description('test')
             test_pbar.set_postfix({
@@ -123,11 +119,11 @@ def main(parse_args):
     Avg_F1_score = []
     kf = StratifiedKFold(n_splits=5, shuffle=True)
     for train_index, test_index in kf.split(dataset['data'], dataset['label']):
-        X_train = torch.tensor(np.array(dataset['data'])[train_index], dtype=torch.float32)
-        Y_train = torch.tensor(np.array(dataset['label'])[train_index])
+        X_train = np.array(dataset['data'])[train_index]
+        Y_train = np.array(dataset['label'])[train_index]
 
-        X_test = torch.tensor(np.array(dataset['data'])[test_index], dtype=torch.float32)
-        Y_test = torch.tensor(np.array(dataset['label'])[test_index])
+        X_test = np.array(dataset['data'])[test_index]
+        Y_test = np.array(dataset['label'])[test_index]
 
         model = build_model(opt).to(device)
         optimizer = torch.optim.AdamW(
@@ -146,8 +142,8 @@ def main(parse_args):
             save_print_results(opt, logger, train_results, test_results)
             scheduler_warmup.step()
 
-        Avg_Accuracy.append()
-        Avg_F1_score.append()
+        Avg_Accuracy.append(test_results['Accuracy'])
+        Avg_F1_score.append(test_results['F1-Score'])
 
     print("mean acc:", np.array(Avg_Accuracy).mean())
     print("mean f1:", np.array(Avg_F1_score).mean())

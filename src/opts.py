@@ -15,7 +15,7 @@ def get_args():
                         help='experiments times')
     parser.add_argument('--epochs', type=int, default=10,
                         help='train epochs')
-    parser.add_argument('--batch_size', type=int, default=16,
+    parser.add_argument('--batch_size', type=int, default=156,
                         help='batch size of train input data')
     parser.add_argument('--patience', type=int, default=3,
                         help='early stopping patience')
@@ -27,6 +27,8 @@ def get_args():
     # Dataset
     parser.add_argument('--labelType', type=str, default='readiness',
                         help='label type is one of quality / readiness / ra')
+    parser.add_argument('--num_class', type=int, default=2,
+                        help='quality:3, ra:3, readiness:2')
     parser.add_argument('--data_path', type=str, default='ETTh1.csv',
                         help='data file')
     parser.add_argument('--task_name', type=str, default='classification',
@@ -51,8 +53,6 @@ def get_args():
                         help='prior anomaly ratio (%)')
     parser.add_argument('--pred_type', type=str, default='quality',
                         help='options: [quality, ra, readiness]')
-    parser.add_argument('--num_class', type=int, default=3,
-                        help='quality:3, ra:3, readiness:2')
 
     args = parser.parse_args()
     return args

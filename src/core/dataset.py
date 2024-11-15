@@ -20,7 +20,7 @@ class create_Dataset():
         bp_data = np.load('data/bps.npy')
         bp_data = bp_data.reshape(bp_data.shape[0], bp_data.shape[1], -1).transpose(0, 2, 1)
 
-        combine_data = {'au': au_data, 'em': em_data, 'hp': hp_data, 'bp': bp_data}
+        combine_data = [{'au': au_data[i], 'em': em_data[i], 'hp': hp_data[i], 'bp': bp_data[i]} for i in range(len(au_data))]
 
         quality_label = np.load('data/quality.npy', allow_pickle=True)
         quality_label = np.array(quality_label, dtype=int)
@@ -58,35 +58,43 @@ class MDDataset(Dataset):
         self.reconstruct_dataset(dataset)
 
     def reconstruct_dataset(self, dataset):
-        self.au = dataset['au']
-        self.em = dataset['em']
-        self.hp = dataset['hp']
-        self.bp = dataset['bp']
+        data, label = dataset[0], dataset[1]
+        au, em, hp, bp = [], [], [], []
+        for i in range(len(data)):
+            au.append(data[i]['au'])
+            em.append(data[i]['em'])
+            hp.append(data[i]['hp'])
+            bp.append(data[i]['bp'])
 
-        self.au_lengths = len(dataset['au'])
-        self.em_lengths = len(dataset['em'])
-        self.hp_lengths = len(dataset['hp'])
-        self.bp_lengths = len(dataset['bp'])
+        self.au = torch.tensor(np.array(au), dtype=torch.float32)
+        self.em = torch.tensor(np.array(em), dtype=torch.float32)
+        self.hp = torch.tensor(np.array(hp), dtype=torch.float32)
+        self.bp = torch.tensor(np.array(bp), dtype=torch.float32)
+
+        self.au_lengths = len(self.au[0])
+        self.em_lengths = len(self.em[0])
+        self.hp_lengths = len(self.hp[0])
+        self.bp_lengths = len(self.bp[0])
 
         # # Clear dirty data
         # self.audio[self.audio == -np.inf] = 0
         # self.vision[self.vision == -np.inf] = 0
 
-        self.label = dataset[self.mode]
+        self.label = torch.tensor(label)
 
     def __len__(self):
         return len(self.label)
 
     def __getitem__(self, index):
         sample = {
-            'au': self.rawText[index],
-            'em': torch.Tensor(self.text[index]),
-            'hp': torch.Tensor(self.audio[index]),
-            'bp': torch.Tensor(self.vision[index]),
-            'au_lengths': self.audio_lengths[index],
-            'em_lengths': self.vision_lengths[index],
-            'hp_lengths': self.audio_lengths[index],
-            'bp_lengths': self.vision_lengths[index],
+            'au': self.au[index],
+            'em': self.em[index],
+            'hp': self.hp[index],
+            'bp': self.bp[index],
+            'au_lengths': self.au_lengths,
+            'em_lengths': self.em_lengths,
+            'hp_lengths': self.hp_lengths,
+            'bp_lengths': self.bp_lengths,
             'label': self.label[index],
             'index': index
         }

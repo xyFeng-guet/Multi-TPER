@@ -21,7 +21,8 @@ class MetricsTop():
 
     def eval_emotake(self, y_pred, y_true):
         _, predicted = torch.max(y_pred, 1)
-        predicted = torch.tensor(predicted)
+        # predicted = torch.tensor(predicted)
+        predicted = predicted.clone().detach()
 
         correct = predicted.eq(y_true.data).sum()
         total = len(y_true)
@@ -30,7 +31,7 @@ class MetricsTop():
         f1 = f1_score(y_true, predicted, average='weighted')
 
         eval_results = {
-            "Accuracy": round(accuracy * 100, 4),
+            "Accuracy": round(accuracy.numpy() * 100, 4),
             "F1-Score": round(f1 * 100, 4)
         }
         return eval_results
