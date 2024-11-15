@@ -4,7 +4,7 @@ import time
 import numpy as np
 from tqdm import tqdm
 from opts import get_args
-from core.dataset import Dataset
+from core.dataset import create_Dataset, create_DataLoader
 from sklearn.model_selection import StratifiedKFold
 from core.scheduler import get_scheduler
 from core.utils import AverageMeter, setup_seed, ConfigLogging, save_print_results, calculate_u_test
@@ -16,22 +16,19 @@ opt = get_args()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def train(model, train_loader, optimizer, loss_fn, epoch, metrics):
-    train_pbar = tqdm(train_loader)
+def train(opt, model, dataset, optimizer, loss_fn, epoch, metrics):
+    dataLoader = create_DataLoader(opt, dataset)
+    train_pbar = tqdm(dataLoader)
+
     losses = AverageMeter()
     y_pred, y_true = [], []
-
     model.train()
+
     for data in train_pbar:
         inputs = {
             'V': data['vision'].to(device),
             'A': data['audio'].to(device),
             'T': data['text'].to(device),
-            'mask': {
-                'V': data['vision_padding_mask'][:, 1:data['vision'].shape[1]+1].to(device),
-                'A': data['audio_padding_mask'][:, 1:data['audio'].shape[1]+1].to(device),
-                'T': []
-            }
         }
         label = data['labels']['M'].to(device)
         label = label.view(-1, 1)
@@ -64,7 +61,7 @@ def train(model, train_loader, optimizer, loss_fn, epoch, metrics):
     return train_results
 
 
-def test(model, test_loader, optimizer, loss_fn, epoch, metrics):
+def test(opt, model, test_loader, optimizer, loss_fn, epoch, metrics):
     test_pbar = tqdm(test_loader)
     losses = AverageMeter()
     y_pred, y_true = [], []
@@ -120,7 +117,7 @@ def main(parse_args):
     logger.info(opt)    # 保存当前模型参数
 
     setup_seed(opt.seed)
-    dataset = Dataset(opt.datasetName, opt.labelType).d_l
+    dataset = create_Dataset(opt.datasetName, opt.labelType).d_l
 
     Avg_Accuracy = []
     Avg_F1_score = []
@@ -144,8 +141,8 @@ def main(parse_args):
         scheduler_warmup = get_scheduler(optimizer, opt.epochs)
 
         for epoch in range(1, opt.epochs+1):
-            train_results = train(model, [X_train, Y_train], optimizer, loss_fn, epoch, metrics)
-            test_results = test(model, [X_test, Y_test], optimizer, loss_fn, epoch, metrics)
+            train_results = train(opt, model, [X_train, Y_train], optimizer, loss_fn, epoch, metrics)
+            test_results = test(opt, model, [X_test, Y_test], optimizer, loss_fn, epoch, metrics)
             save_print_results(opt, logger, train_results, test_results)
             scheduler_warmup.step()
 

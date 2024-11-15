@@ -15,7 +15,7 @@ def get_args():
                         help='experiments times')
     parser.add_argument('--epochs', type=int, default=10,
                         help='train epochs')
-    parser.add_argument('--batch_size', type=int, default=32,
+    parser.add_argument('--batch_size', type=int, default=16,
                         help='batch size of train input data')
     parser.add_argument('--patience', type=int, default=3,
                         help='early stopping patience')
@@ -31,7 +31,7 @@ def get_args():
                         help='data file')
     parser.add_argument('--task_name', type=str, default='classification',
                         help='task name, options:[long_term_forecast, short_term_forecast, imputation, classification, anomaly_detection]')
-    parser.add_argument('--num_workers', type=int, default=10,
+    parser.add_argument('--num_workers', type=int, default=1,
                         help='data loader num workers')
 
     # Modal

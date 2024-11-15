@@ -1,7 +1,9 @@
 import numpy as np
+import torch
+from torch.utils.data import Dataset, DataLoader
 
 
-class Dataset():
+class create_Dataset():
     def __init__(self, datasetNmae, labelType):
         DATA_MAP = {
             'emotake': self.__init_emotake,
@@ -18,7 +20,7 @@ class Dataset():
         bp_data = np.load('data/bps.npy')
         bp_data = bp_data.reshape(bp_data.shape[0], bp_data.shape[1], -1).transpose(0, 2, 1)
 
-        combine_data = np.column_stack((au_data, em_data, hp_data, bp_data))    # person_num * seq_num * seq_len(300)
+        combine_data = {'au': au_data, 'em': em_data, 'hp': hp_data, 'bp': bp_data}
 
         quality_label = np.load('data/quality.npy', allow_pickle=True)
         quality_label = np.array(quality_label, dtype=int)
@@ -36,8 +38,56 @@ class Dataset():
 
         return combine_data, combine_label
 
-    def __select_data(self, index):
-        return None
-
     def __len__(self):
         return len(self.dataset['label'])
+
+
+def create_DataLoader(opt, dataset):
+    dataset = MDDataset(dataset)
+    dataLoader = DataLoader(
+        dataset,
+        batch_size=opt.batch_size,
+        num_workers=opt.num_workers,
+        shuffle=True
+    )
+    return dataLoader
+
+
+class MDDataset(Dataset):
+    def __init__(self, dataset):
+        self.reconstruct_dataset(dataset)
+
+    def reconstruct_dataset(self, dataset):
+        self.au = dataset['au']
+        self.em = dataset['em']
+        self.hp = dataset['hp']
+        self.bp = dataset['bp']
+
+        self.au_lengths = len(dataset['au'])
+        self.em_lengths = len(dataset['em'])
+        self.hp_lengths = len(dataset['hp'])
+        self.bp_lengths = len(dataset['bp'])
+
+        # # Clear dirty data
+        # self.audio[self.audio == -np.inf] = 0
+        # self.vision[self.vision == -np.inf] = 0
+
+        self.label = dataset[self.mode]
+
+    def __len__(self):
+        return len(self.label)
+
+    def __getitem__(self, index):
+        sample = {
+            'au': self.rawText[index],
+            'em': torch.Tensor(self.text[index]),
+            'hp': torch.Tensor(self.audio[index]),
+            'bp': torch.Tensor(self.vision[index]),
+            'au_lengths': self.audio_lengths[index],
+            'em_lengths': self.vision_lengths[index],
+            'hp_lengths': self.audio_lengths[index],
+            'bp_lengths': self.vision_lengths[index],
+            'label': self.label[index],
+            'index': index
+        }
+        return sample
