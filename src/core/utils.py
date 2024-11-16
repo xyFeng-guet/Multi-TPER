@@ -83,7 +83,7 @@ def save_print_results(opt, logger, train_re, test_re):
         headers = ["Phase", "Accuracy", "F1-Score"]
 
         table = '\n' + tabulate(results, headers, tablefmt="grid") + '\n'
-        logger.info(table.replace('\n', '\n\n'))
+        logger.info(table)
     else:
         results = [
             ["Train", train_re["MAE"], train_re["Corr"], train_re["Mult_acc_2"], train_re["Mult_acc_3"], train_re["Mult_acc_5"], train_re["F1_score"]],
@@ -93,7 +93,7 @@ def save_print_results(opt, logger, train_re, test_re):
 
         table = '\n' + tabulate(results, headers, tablefmt="grid") + '\n'
         if logger is not None:
-            logger.info(table.replace('\n', '\n\n'))
+            logger.info(table)
         else:
             print(table)
 

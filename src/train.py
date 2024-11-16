@@ -145,8 +145,8 @@ def main(parse_args):
         Avg_Accuracy.append(test_results['Accuracy'])
         Avg_F1_score.append(test_results['F1-Score'])
 
-    print("mean acc:", np.array(Avg_Accuracy).mean())
-    print("mean f1:", np.array(Avg_F1_score).mean())
+    logger.info(f"mean acc: {np.array(Avg_Accuracy).mean()}")
+    logger.info(f"mean f1 : {np.array(Avg_F1_score).mean()}")
 
 
 if __name__ == '__main__':
