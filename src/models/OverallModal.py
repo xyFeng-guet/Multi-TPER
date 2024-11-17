@@ -1,18 +1,32 @@
 import torch
 from torch import nn
+from EncoderModule import UnimodalEncoder
+from FusionModual import MultimodalFusion
 
 
 class TPER(nn.Module):
     def __init__(self, opt):
         super(TPER, self).__init__()
-        self.cls_layer = SentiCLS(fusion_dim=256, n_class=opt.n_class)
+        # Unimodal Embedding and Encoder
+        self.UniEncoder = UnimodalEncoder(opt)
+
+        # Multimodal Interaction and Fusion
+        self.MultiFusion = MultimodalFusion(opt)
+
+        # Classification Prediction
+        self.CLS = SentiCLS(fusion_dim=256, n_class=opt.n_class)
 
     def forward(self, input_data):
-        input_data = torch.column_stack((input_data['au'], input_data['em'], input_data['hp'], input_data['bp']))    # person_num * seq_num * seq_len(300)
-        data = torch.mean(input_data, dim=1)
+        au, em, hp, bp = input_data['au'], input_data['em'], input_data['hp'], input_data['bp']
 
-        pred = torch.sigmoid(self.linear1(data))
-        prediction = self.linear2(pred)
+        # Unimodal Encoding
+        unimodal_features = self.UniEncoder(au, em, hp, bp)
+
+        # Dynamic Multimodal Fusion using High-level Semantic Features
+        multimodal_features = self.MultiFusion(unimodal_features)
+
+        # Sentiment Classification
+        prediction = self.CLS(unimodal_features, multimodal_features)     # uni_fea['T'], uni_fea['V'], uni_fea['A']
 
         return prediction
 
@@ -28,7 +42,7 @@ class SentiCLS(nn.Module):
             nn.Linear(32, n_class, bias=True)
         )
 
-    def forward(self, fusion_features):
+    def forward(self, unimodal_features, fusion_features):
         fusion_features = torch.mean(fusion_features, dim=-2)
         output = self.cls_layer(fusion_features)
         return output
@@ -36,58 +50,4 @@ class SentiCLS(nn.Module):
 
 def build_model(opt):
     model = TPER(opt)
-    return model
-
-
-class KMSA(nn.Module):
-    def __init__(self, opt, dataset, bert_pretrained='bert-base-uncased'):
-        super(KMSA, self).__init__()
-        # Unimodal Encoder & Knowledge Inject Adapter
-        self.UniEncKI = UnimodalEncoder(opt, bert_pretrained)
-
-        # Multimodal Fusion
-        self.DyMultiFus = DyRoutTrans(opt)
-
-        # Output Classification for Sentiment Analysis
-        self.CLS = SentiCLS(opt)
-
-    def forward(self, inputs_data_mask, multi_senti):
-        # Unimodal Encoder & Knowledge Inject // Unimodal Sentiment Prediction
-        uni_fea, uni_senti = self.UniEncKI(inputs_data_mask)    # [T, V, A]
-        uni_mask = inputs_data_mask['mask']
-
-        # Dynamic Multimodal Fusion using Dynamic Route Transformer with Unimodal Sentiment Prediction
-        if multi_senti is not None:
-            senti_ratio = calculate_ratio_senti(uni_senti, multi_senti, k=0.1)
-        else:
-            senti_ratio = None
-        multimodal_features, nce_loss = self.DyMultiFus(uni_fea, uni_mask, senti_ratio)
-
-        # Sentiment Classification
-        prediction = self.CLS(multimodal_features)     # uni_fea['T'], uni_fea['V'], uni_fea['A']
-
-        return prediction, nce_loss
-
-    def preprocess_model(self, pretrain_path):
-        # 加载预训练模型
-        ckpt_t = torch.load(pretrain_path['T'])
-        self.UniEncKI.enc_t.load_state_dict(ckpt_t)
-        ckpt_v = torch.load(pretrain_path['V'])
-        self.UniEncKI.enc_v.load_state_dict(ckpt_v)
-        ckpt_a = torch.load(pretrain_path['A'])
-        self.UniEncKI.enc_a.load_state_dict(ckpt_a)
-        # 冻结外部知识注入参数
-        for name, parameter in self.UniEncKI.named_parameters():
-            if 'adapter' in name or 'decoder' in name:
-                parameter.requires_grad = False
-
-
-def build_model(opt):
-    if 'sims' in opt.datasetName:
-        l_pretrained = './BERT/bert-base-chinese'
-    else:
-        l_pretrained = './BERT/bert-base-uncased'
-
-    model = KMSA(opt, dataset=opt.datasetName, bert_pretrained=l_pretrained)
-
     return model

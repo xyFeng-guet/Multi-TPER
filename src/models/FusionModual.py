@@ -5,31 +5,6 @@ from torch import nn, einsum
 from einops import rearrange
 
 
-class CPC(nn.Module):
-    def __init__(self, x_size, y_size, n_layers=1, activation='Tanh'):
-        super().__init__()
-        self.x_size = x_size
-        self.y_size = y_size
-        self.layers = n_layers
-        self.activation = getattr(nn, activation)
-
-    def forward(self, x, y):
-        x = torch.mean(x, dim=-2)
-        y = torch.mean(y, dim=-2)
-
-        # x_pred = self.net(y)    # bs, emb_size
-        x_pred = y
-
-        # normalize to unit sphere
-        x_pred = x_pred / x_pred.norm(dim=1, keepdim=True)
-        x = x / x.norm(dim=1, keepdim=True)
-
-        pos = torch.sum(x*x_pred, dim=-1)   # bs
-        neg = torch.logsumexp(torch.matmul(x, x_pred.t()), dim=-1)   # bs
-        nce = -(pos - neg).mean()
-        return nce
-
-
 class FeedForward(nn.Module):
     def __init__(self, dim, hidden_dim, dropout=0.):
         super(FeedForward, self).__init__()
@@ -140,9 +115,9 @@ class DyRoutTrans_block(nn.Module):
         return source
 
 
-class DyRoutTrans(nn.Module):
+class MultimodalFusion(nn.Module):
     def __init__(self, opt):
-        super(DyRoutTrans, self).__init__()
+        super(MultimodalFusion, self).__init__()
         self.opt = opt
 
         # Length Align
@@ -157,10 +132,6 @@ class DyRoutTrans(nn.Module):
 
         fusion_block = DyRoutTrans_block(opt)
         self.dec_list = self._get_clones(fusion_block, 3)
-
-        self.cpc_ft = CPC(x_size=256, y_size=256)
-        self.cpc_fv = CPC(x_size=256, y_size=256)
-        self.cpc_fa = CPC(x_size=256, y_size=256)
 
     def forward(self, uni_fea, uni_mask, senti_ratio):
         hidden_t = self.len_t(self.dim_t(uni_fea['T']).permute(0, 2, 1)).permute(0, 2, 1)
@@ -180,20 +151,3 @@ class DyRoutTrans(nn.Module):
 
     def _get_clones(self, module, N):
         return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
-
-
-class SentiCLS(nn.Module):
-    def __init__(self, opt):
-        super(SentiCLS, self).__init__()
-        self.cls_layer = nn.Sequential(
-            nn.Linear(256, 64, bias=True),
-            nn.GELU(),
-            nn.Linear(64, 32, bias=True),
-            nn.GELU(),
-            nn.Linear(32, 1, bias=True)
-        )
-
-    def forward(self, fusion_features):
-        fusion_features = torch.mean(fusion_features, dim=-2)
-        output = self.cls_layer(fusion_features)
-        return output
