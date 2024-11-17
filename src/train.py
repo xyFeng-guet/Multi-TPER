@@ -29,7 +29,13 @@ def train(opt, model, dataset, optimizer, loss_fn, epoch, metrics):
             'au': data['au'].to(device),
             'em': data['em'].to(device),
             'hp': data['hp'].to(device),
-            'bp': data['bp'].to(device)
+            'bp': data['bp'].to(device),
+            'padding_mask': {
+                'au': data['padding_mask_au'].to(device),
+                'em': data['padding_mask_em'].to(device),
+                'hp': data['padding_mask_hp'].to(device),
+                'bp': data['padding_mask_bp'].to(device)
+            }
         }
         label = data['label'].to(device)
         batchsize = inputs['au'].shape[0]
@@ -74,7 +80,13 @@ def test(opt, model, dataset, optimizer, loss_fn, epoch, metrics):
                 'au': data['au'].to(device),
                 'em': data['em'].to(device),
                 'hp': data['hp'].to(device),
-                'bp': data['bp'].to(device)
+                'bp': data['bp'].to(device),
+                'padding_mask': {
+                    'au': data['padding_mask_au'].to(device),
+                    'em': data['padding_mask_em'].to(device),
+                    'hp': data['padding_mask_hp'].to(device),
+                    'bp': data['padding_mask_bp'].to(device)
+                }
             }
             label = data['label'].to(device)
             batchsize = inputs['au'].shape[0]

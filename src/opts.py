@@ -11,11 +11,9 @@ def get_args():
                         help='dataset name of use training')
     parser.add_argument('--seed', type=int, default=1111,
                         help='random seed')
-    parser.add_argument('--itr', type=int, default=1,
-                        help='experiments times')
-    parser.add_argument('--epochs', type=int, default=10,
+    parser.add_argument('--epochs', type=int, default=30,
                         help='train epochs')
-    parser.add_argument('--batch_size', type=int, default=16,
+    parser.add_argument('--batch_size', type=int, default=64,
                         help='batch size of train input data')
     parser.add_argument('--patience', type=int, default=1,
                         help='early stopping patience')
@@ -31,26 +29,12 @@ def get_args():
                         help='quality:3, ra:3, readiness:2')
     parser.add_argument('--data_path', type=str, default='ETTh1.csv',
                         help='data file')
-    parser.add_argument('--task_name', type=str, default='classification',
-                        help='task name, options:[long_term_forecast, short_term_forecast, imputation, classification, anomaly_detection]')
     parser.add_argument('--num_workers', type=int, default=1,
                         help='data loader num workers')
 
     # Modal
-    parser.add_argument('--seq_len', type=int, default=300,
-                        help='input sequence length')
-    parser.add_argument('--label_len', type=int, default=48,
-                        help='start token length')
-    parser.add_argument('--pred_len', type=int, default=96,
-                        help='prediction sequence length')
-    parser.add_argument('--seasonal_patterns', type=str, default='Monthly',
-                        help='subset for M4')
-    parser.add_argument('--inverse', action='store_true', default=False,
-                        help='inverse output data')
-    parser.add_argument('--mask_rate', type=float, default=0.25,
-                        help='mask ratio')
-    parser.add_argument('--anomaly_ratio', type=float, default=0.25,
-                        help='prior anomaly ratio (%)')
+    parser.add_argument('--seq_lens', type=list, default=[35, 288, 6, 24],
+                        help='input sequence length of four modalities')
     parser.add_argument('--pred_type', type=str, default='quality',
                         help='options: [quality, ra, readiness]')
 

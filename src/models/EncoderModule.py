@@ -39,12 +39,12 @@ class TransforEncoderBlock(nn.Module):
 
     def forward(self, src, src_key_padding_mask):
         src = self.pos_encoder(src)
-        output, hidden_list = self.tfencoder(src, mask=None, src_key_padding_mask=src_key_padding_mask)
-        return output, hidden_list
+        output = self.tfencoder(src, mask=None, src_key_padding_mask=src_key_padding_mask)
+        return output
 
 
 class TransforEncoder(nn.Module):
-    def __init__(self, modality, num_patches, fea_size, dim_feedforward, nhead=8, num_layers=4):
+    def __init__(self, modality, num_patches, fea_size, dim_feedforward, nhead=4, num_layers=3):
         super(TransforEncoder, self).__init__()
         self.tfencoder = TransforEncoderBlock(
             fea_size=fea_size,
@@ -56,7 +56,7 @@ class TransforEncoder(nn.Module):
         self.layernorm = nn.LayerNorm(dim_feedforward)
 
     def forward(self, inputs, key_padding_mask):
-        tf_last_hidden_state, tf_hidden_state_list = self.tfencoder(inputs, src_key_padding_mask=key_padding_mask)
+        tf_last_hidden_state = self.tfencoder(inputs, src_key_padding_mask=key_padding_mask)
 
         # TransformerEncoder提取的领域知识
         spci_know = self.layernorm(tf_last_hidden_state)
@@ -73,15 +73,17 @@ class UnimodalEncoder(nn.Module):
     def __init__(self, opt):
         super(UnimodalEncoder, self).__init__()
         # All Encoders of Each Modality
-        self.enc_t = TransforEncoder(modality="T", num_patches=opt.seq_lens[0], fea_size=768)
-        self.enc_v = TransforEncoder(modality="V", num_patches=opt.seq_lens[1], fea_size=709)
-        self.enc_a = TransforEncoder(modality="A", num_patches=opt.seq_lens[2], fea_size=33)
+        self.enc_au = TransforEncoder(modality="au", num_patches=opt.seq_lens[0], fea_size=300, dim_feedforward=512)
+        self.enc_em = TransforEncoder(modality="em", num_patches=opt.seq_lens[1], fea_size=300, dim_feedforward=512)
+        self.enc_hp = TransforEncoder(modality="hp", num_patches=opt.seq_lens[2], fea_size=300, dim_feedforward=512)
+        self.enc_bp = TransforEncoder(modality="bp", num_patches=opt.seq_lens[3], fea_size=300, dim_feedforward=512)
 
         # LSTM Encoder for learning sequential features
 
-    def forward(self, inputs_data_mask):
-        hidden_t = self.enc_t(inputs_data_mask)
-        hidden_v = self.enc_v(inputs_data_mask)
-        hidden_a = self.enc_a(inputs_data_mask)
+    def forward(self, au, em, hp, bp, mask):
+        hidden_au = self.enc_au(au, mask['au'])
+        hidden_em = self.enc_em(em, mask['em'])
+        hidden_hp = self.enc_hp(hp, mask['hp'])
+        hidden_bp = self.enc_bp(bp, mask['bp'])
 
-        return {'T': hidden_t, 'V': hidden_v, 'A': hidden_a}
+        return {'au': hidden_au, 'em': hidden_em, 'hp': hidden_hp, 'bp': hidden_bp}

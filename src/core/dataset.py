@@ -79,8 +79,18 @@ class MDDataset(Dataset):
         # # Clear dirty data
         # self.audio[self.audio == -np.inf] = 0
         # self.vision[self.vision == -np.inf] = 0
-
+        self.__gen_mask()
         self.label = torch.tensor(label)
+
+    def __gen_mask(self):
+        mask_list = []
+        for data in [self.au, self.em, self.hp, self.bp]:
+            mask = torch.tensor([[False for i in range(data.shape[1])] for j in range(data.shape[0])])
+            mask_list.append(mask)
+        self.padding_mask_au = mask_list[0]
+        self.padding_mask_em = mask_list[1]
+        self.padding_mask_hp = mask_list[2]
+        self.padding_mask_bp = mask_list[3]
 
     def __len__(self):
         return len(self.label)
@@ -95,6 +105,10 @@ class MDDataset(Dataset):
             'em_lengths': self.em_lengths,
             'hp_lengths': self.hp_lengths,
             'bp_lengths': self.bp_lengths,
+            'padding_mask_au': self.padding_mask_au[index],
+            'padding_mask_em': self.padding_mask_em[index],
+            'padding_mask_hp': self.padding_mask_hp[index],
+            'padding_mask_bp': self.padding_mask_bp[index],
             'label': self.label[index],
             'index': index
         }
