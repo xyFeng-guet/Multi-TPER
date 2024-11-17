@@ -7,13 +7,12 @@ Multi-task Learning Framework with Multimodal Signal for Takeover Prediction and
 
 ![tool](overview.png)
 
-## Usage
-
-For more detailed baseline information, please refer to [iTransformer](https://github.com/thuml/iTransformer).
+## Running
+The dataset used in this project comes from [EmoTake](https://github.com/yibingweng/EmoTake).
 
 ## Citation
 
-If you find our work helpful, please consider citing the following papers.
+If you find this work helpful, please consider citing the following papers.
 
 ```
 @article{gu2024emotake,
@@ -29,5 +28,5 @@ If you find our work helpful, please consider citing the following papers.
 
 If you have any questions or want to use the code, feel free to contact:
 
-+ Xinyu Feng: (22032202005@mails.guet.edu.cn)
 + Yu Gu: (yugu.bruce@ieee.org)
++ Xinyu Feng: (22032202005@mails.guet.edu.cn)
