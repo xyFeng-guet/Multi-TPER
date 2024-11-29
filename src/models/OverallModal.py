@@ -15,7 +15,7 @@ class TPER(nn.Module):
         # self.MultiFusion = MultimodalFusion(opt)
 
         # Classification Prediction
-        self.CLS = SentiCLS(fusion_dim=128*4, n_class=opt.num_class)
+        self.CLS = SentiCLS(fusion_dim=512*4, n_class=opt.num_class)
 
     def forward(self, input_data):
         au, em, hp, bp = input_data['au'], input_data['em'], input_data['hp'], input_data['bp']
@@ -34,14 +34,14 @@ class TPER(nn.Module):
 
 
 class SentiCLS(nn.Module):
-    def __init__(self, fusion_dim, n_class):
+    def __init__(self, fusion_dim, n_class, classifier_dropout=0.2):
         super(SentiCLS, self).__init__()
         self.cls_layer = nn.Sequential(
-            nn.Linear(fusion_dim, 64, bias=True),
-            # nn.Tanh(),
-            nn.Linear(64, 64, bias=True),
-            nn.Tanh(),
-            nn.Linear(64, n_class, bias=True)
+            nn.Dropout(p=classifier_dropout),
+            nn.Linear(fusion_dim, fusion_dim),
+            nn.ReLU(),
+            nn.Linear(fusion_dim, n_class),
+            nn.Sigmoid()
         )
 
     def forward(self, uni_features):

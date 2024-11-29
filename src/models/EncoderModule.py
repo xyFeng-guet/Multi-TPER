@@ -25,7 +25,7 @@ class PositionEncoding(nn.Module):
 
 
 class TransforEncoderBlock(nn.Module):
-    def __init__(self, fea_size, num_patches, nhead, dim_feedforward, num_layers, pos_dropout=0., tf_dropout=0.5):
+    def __init__(self, fea_size, num_patches, nhead, dim_feedforward, num_layers, pos_dropout=0., tf_dropout=0.2):
         super(TransforEncoderBlock, self).__init__()
         self.pos_encoder = PositionEncoding(
             num_patches=num_patches,
@@ -44,7 +44,7 @@ class TransforEncoderBlock(nn.Module):
 
 
 class TransforEncoder(nn.Module):
-    def __init__(self, modality, num_patches, fea_size, dim_feedforward, nhead=2, num_layers=2):
+    def __init__(self, modality, num_patches, fea_size, dim_feedforward, nhead=8, num_layers=2):
         super(TransforEncoder, self).__init__()
         self.tfencoder = TransforEncoderBlock(
             fea_size=fea_size,
@@ -73,10 +73,10 @@ class UnimodalEncoder(nn.Module):
     def __init__(self, opt):
         super(UnimodalEncoder, self).__init__()
         # All Encoders of Each Modality
-        self.enc_au = TransforEncoder(modality="au", num_patches=opt.seq_lens[0], fea_size=300, dim_feedforward=128)
-        self.enc_em = TransforEncoder(modality="em", num_patches=opt.seq_lens[1], fea_size=300, dim_feedforward=128)
-        self.enc_hp = TransforEncoder(modality="hp", num_patches=opt.seq_lens[2], fea_size=300, dim_feedforward=128)
-        self.enc_bp = TransforEncoder(modality="bp", num_patches=opt.seq_lens[3], fea_size=300, dim_feedforward=128)
+        self.enc_au = TransforEncoder(modality="au", num_patches=opt.seq_lens[0], fea_size=300, dim_feedforward=512)
+        self.enc_em = TransforEncoder(modality="em", num_patches=opt.seq_lens[1], fea_size=300, dim_feedforward=512)
+        self.enc_hp = TransforEncoder(modality="hp", num_patches=opt.seq_lens[2], fea_size=300, dim_feedforward=512)
+        self.enc_bp = TransforEncoder(modality="bp", num_patches=opt.seq_lens[3], fea_size=300, dim_feedforward=512)
 
         # LSTM Encoder for learning sequential features
 
