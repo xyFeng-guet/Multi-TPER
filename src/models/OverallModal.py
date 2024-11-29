@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from models.EncoderModule import UnimodalEncoder
 from models.FusionModual import MultimodalFusion
+import torch.nn.functional as F
 
 
 class TPER(nn.Module):
@@ -14,7 +15,7 @@ class TPER(nn.Module):
         # self.MultiFusion = MultimodalFusion(opt)
 
         # Classification Prediction
-        self.CLS = SentiCLS(fusion_dim=512*4, n_class=opt.num_class)
+        self.CLS = SentiCLS(fusion_dim=128*4, n_class=opt.num_class)
 
     def forward(self, input_data):
         au, em, hp, bp = input_data['au'], input_data['em'], input_data['hp'], input_data['bp']
@@ -36,11 +37,11 @@ class SentiCLS(nn.Module):
     def __init__(self, fusion_dim, n_class):
         super(SentiCLS, self).__init__()
         self.cls_layer = nn.Sequential(
-            nn.Linear(fusion_dim, 128, bias=True),
-            nn.GELU(),
-            nn.Linear(128, 32, bias=True),
-            # nn.GELU(),
-            nn.Linear(32, n_class, bias=True)
+            nn.Linear(fusion_dim, 64, bias=True),
+            # nn.Tanh(),
+            nn.Linear(64, 64, bias=True),
+            nn.Tanh(),
+            nn.Linear(64, n_class, bias=True)
         )
 
     def forward(self, uni_features):
@@ -51,6 +52,7 @@ class SentiCLS(nn.Module):
             uni_features[Type] = torch.mean(uni_features[Type], dim=1)
         features = torch.cat((uni_features['au'], uni_features['em'], uni_features['hp'], uni_features['bp']), dim=1)
         output = self.cls_layer(features)
+        output = F.softmax(output, dim=1)
         return output
 
 
