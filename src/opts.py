@@ -9,13 +9,13 @@ def get_args():
                         help='log path of train and test')
     parser.add_argument('--datasetName', type=str, default='emotake',
                         help='dataset name of use training')
-    parser.add_argument('--seed', type=int, default=16,
+    parser.add_argument('--seed', type=int, default=111,
                         help='random seed')
-    parser.add_argument('--epochs', type=int, default=30,
+    parser.add_argument('--epochs', type=int, default=20,
                         help='train epochs')
     parser.add_argument('--batch_size', type=int, default=32,
                         help='batch size of train input data')
-    parser.add_argument('--patience', type=int, default=3,
+    parser.add_argument('--patience', type=int, default=1,
                         help='early stopping patience')
     parser.add_argument('--learning_rate', type=float, default=1e-4,
                         help='optimizer learning rate')
@@ -35,6 +35,10 @@ def get_args():
     # Modal
     parser.add_argument('--seq_lens', type=list, default=[35, 288, 6, 24],
                         help='input sequence length of four modalities')
+    parser.add_argument('--hidden_size', type=int, default=512,
+                        help='')
+    parser.add_argument('--ffn_size', type=int, default=512,
+                        help='')
 
     args = parser.parse_args()
     return args

@@ -35,6 +35,12 @@ def train(opt, model, dataset, optimizer, loss_fn, epoch, metrics):
                 'em': data['padding_mask_em'].to(device),
                 'hp': data['padding_mask_hp'].to(device),
                 'bp': data['padding_mask_bp'].to(device)
+            },
+            'length': {
+                'au': data['au_lengths'].to(device),
+                'em': data['em_lengths'].to(device),
+                'hp': data['hp_lengths'].to(device),
+                'bp': data['bp_lengths'].to(device)
             }
         }
         label = data['label'].to(device)
@@ -86,6 +92,12 @@ def test(opt, model, dataset, optimizer, loss_fn, epoch, metrics):
                     'em': data['padding_mask_em'].to(device),
                     'hp': data['padding_mask_hp'].to(device),
                     'bp': data['padding_mask_bp'].to(device)
+                },
+                'length': {
+                    'au': data['au_lengths'].to(device),
+                    'em': data['em_lengths'].to(device),
+                    'hp': data['hp_lengths'].to(device),
+                    'bp': data['bp_lengths'].to(device)
                 }
             }
             label = data['label'].to(device)

@@ -76,31 +76,31 @@ class CrossTransformer(nn.Module):
 class DyRout_block(nn.Module):
     def __init__(self, opt, dropout):
         super(DyRout_block, self).__init__()
-        self.f_t = CrossTransformer(dim=opt.hidden_size, mlp_dim=opt.ffn_size, dropout=dropout)
-        self.f_v = CrossTransformer(dim=opt.hidden_size, mlp_dim=opt.ffn_size, dropout=dropout)
-        self.f_a = CrossTransformer(dim=opt.hidden_size, mlp_dim=opt.ffn_size, dropout=dropout)
+        self.f_au = CrossTransformer(dim=opt.hidden_size, mlp_dim=opt.ffn_size, dropout=dropout)
+        self.f_em = CrossTransformer(dim=opt.hidden_size, mlp_dim=opt.ffn_size, dropout=dropout)
+        self.f_hp = CrossTransformer(dim=opt.hidden_size, mlp_dim=opt.ffn_size, dropout=dropout)
+        self.f_bp = CrossTransformer(dim=opt.hidden_size, mlp_dim=opt.ffn_size, dropout=dropout)
 
-        self.layernorm_t = nn.LayerNorm(256)
-        self.layernorm_v = nn.LayerNorm(256)
-        self.layernorm_a = nn.LayerNorm(256)
-        self.layernorm = nn.LayerNorm(256)
+        self.layernorm_au = nn.LayerNorm(512)
+        self.layernorm_em = nn.LayerNorm(512)
+        self.layernorm_hp = nn.LayerNorm(512)
+        self.layernorm_bp = nn.LayerNorm(512)
 
-    def forward(self, source, t, v, a, senti):
-        cross_f_t = self.f_t(target_x=source, source_x=t)
-        cross_f_v = self.f_v(target_x=source, source_x=v)
-        cross_f_a = self.f_a(target_x=source, source_x=a)
+    def forward(self, source, au, em, hp, bp):
+        cross_f_au = self.f_au(target_x=source, source_x=au)
+        cross_f_em = self.f_em(target_x=source, source_x=em)
+        cross_f_hp = self.f_hp(target_x=source, source_x=hp)
+        cross_f_bp = self.f_bp(target_x=source, source_x=bp)
 
-        if senti is not None:
-            output = self.layernorm(self.layernorm_t(cross_f_t + senti['T'] * cross_f_t) + self.layernorm_v(cross_f_v + senti['V'] * cross_f_v) + self.layernorm_a(cross_f_a + senti['A'] * cross_f_a))
-        else:
-            output = self.layernorm(cross_f_t + cross_f_v + cross_f_a)
+        output = self.layernorm_au(cross_f_au) + self.layernorm_em(cross_f_em) + self.layernorm_hp(cross_f_hp) + self.layernorm_bp(cross_f_bp)
+
         return output
 
 
 class DyRoutTrans_block(nn.Module):
     def __init__(self, opt):
         super(DyRoutTrans_block, self).__init__()
-        self.mhatt1 = DyRout_block(opt, dropout=0.3)
+        self.mhatt1 = DyRout_block(opt, dropout=0.)
         self.mhatt2 = MultiHAtten(opt.hidden_size, dropout=0.)
         self.ffn = FeedForward(opt.hidden_size, opt.ffn_size, dropout=0.)
 
@@ -108,8 +108,8 @@ class DyRoutTrans_block(nn.Module):
         self.norm2 = nn.LayerNorm(opt.hidden_size, eps=1e-6)
         self.norm3 = nn.LayerNorm(opt.hidden_size, eps=1e-6)
 
-    def forward(self, source, t, v, a, mask, senti):
-        source = self.norm1(source + self.mhatt1(source, t, v, a, senti=senti))
+    def forward(self, source, au, em, hp, bp, mask):
+        source = self.norm1(source + self.mhatt1(source, au, em, hp, bp))
         source = self.norm2(source + self.mhatt2(q=source, k=source, v=source))
         source = self.norm3(source + self.ffn(source))
         return source
@@ -121,33 +121,31 @@ class MultimodalFusion(nn.Module):
         self.opt = opt
 
         # Length Align
-        self.len_t = nn.Linear(opt.seq_lens[0], opt.seq_lens[0])
-        self.len_v = nn.Linear(opt.seq_lens[1], opt.seq_lens[0])
-        self.len_a = nn.Linear(opt.seq_lens[2], opt.seq_lens[0])
+        self.len_au = nn.Linear(opt.seq_lens[0], 8)
+        self.len_em = nn.Linear(opt.seq_lens[1], 8)
+        self.len_hp = nn.Linear(opt.seq_lens[2], 8)
+        self.len_bp = nn.Linear(opt.seq_lens[3], 8)
 
         # Dimension Align
-        self.dim_t = nn.Linear(768*2, 256)
-        self.dim_v = nn.Linear(256, 256)
-        self.dim_a = nn.Linear(256, 256)
+        self.dim_au = nn.Linear(512, 512)
+        self.dim_em = nn.Linear(512, 512)
+        self.dim_hp = nn.Linear(512, 512)
+        self.dim_bp = nn.Linear(512, 512)
 
         fusion_block = DyRoutTrans_block(opt)
-        self.dec_list = self._get_clones(fusion_block, 3)
+        self.dec_list = self._get_clones(fusion_block, 4)
 
-    def forward(self, uni_fea, uni_mask, senti_ratio):
-        hidden_t = self.len_t(self.dim_t(uni_fea['T']).permute(0, 2, 1)).permute(0, 2, 1)
-        hidden_v = self.len_v(self.dim_v(uni_fea['V']).permute(0, 2, 1)).permute(0, 2, 1)
-        hidden_a = self.len_a(self.dim_a(uni_fea['A']).permute(0, 2, 1)).permute(0, 2, 1)
+    def forward(self, uni_fea, uni_mask=None):
+        hidden_au = self.len_au(self.dim_au(uni_fea['au']).permute(0, 2, 1)).permute(0, 2, 1)
+        hidden_em = self.len_em(self.dim_em(uni_fea['em']).permute(0, 2, 1)).permute(0, 2, 1)
+        hidden_hp = self.len_hp(self.dim_hp(uni_fea['hp']).permute(0, 2, 1)).permute(0, 2, 1)
+        hidden_bp = self.len_bp(self.dim_bp(uni_fea['bp']).permute(0, 2, 1)).permute(0, 2, 1)
 
-        source = hidden_t + hidden_v + hidden_a
+        source = hidden_au + hidden_em + hidden_hp + hidden_bp
         for i, dec in enumerate(self.dec_list):
-            source = dec(source, hidden_t, hidden_v, hidden_a, uni_mask, senti_ratio)
+            source = dec(source, hidden_au, hidden_em, hidden_hp, hidden_bp, uni_mask)
 
-        nce_t = self.cpc_ft(hidden_t, source)
-        nce_v = self.cpc_fv(hidden_v, source)
-        nce_a = self.cpc_fa(hidden_a, source)
-        nce_loss = nce_t + nce_v + nce_a
-
-        return source, nce_loss
+        return source
 
     def _get_clones(self, module, N):
         return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
