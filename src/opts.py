@@ -11,7 +11,7 @@ def get_args():
                         help='dataset name of use training')
     parser.add_argument('--seed', type=int, default=111,
                         help='random seed')
-    parser.add_argument('--epochs', type=int, default=20,
+    parser.add_argument('--epochs', type=int, default=30,
                         help='train epochs')
     parser.add_argument('--batch_size', type=int, default=32,
                         help='batch size of train input data')

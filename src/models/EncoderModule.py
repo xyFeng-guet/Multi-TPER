@@ -26,7 +26,7 @@ class PositionEncoding(nn.Module):
 
 
 class TransforEncoderBlock(nn.Module):
-    def __init__(self, fea_size, num_patches, nhead, dim_feedforward, num_layers, pos_dropout=0., tf_dropout=0.):
+    def __init__(self, fea_size, num_patches, nhead, dim_feedforward, num_layers, pos_dropout=0., tf_dropout=0.5):
         super(TransforEncoderBlock, self).__init__()
         self.pos_encoder = PositionEncoding(
             num_patches=num_patches,
@@ -45,7 +45,7 @@ class TransforEncoderBlock(nn.Module):
 
 
 class TransforEncoder(nn.Module):
-    def __init__(self, modality, num_patches, fea_size, dim_feedforward, nhead=8, num_layers=3):
+    def __init__(self, modality, num_patches, fea_size, dim_feedforward, nhead=2, num_layers=2):
         super(TransforEncoder, self).__init__()
         self.tfencoder = TransforEncoderBlock(
             fea_size=fea_size,
@@ -75,7 +75,7 @@ class TemplateEncoder(nn.Module):
         super(TemplateEncoder, self).__init__()
         self.rnn = nn.LSTM(input_size=fea_size, hidden_size=dim_feedforward, num_layers=num_layers, bidirectional=True, dropout=0.1, batch_first=True)
         self.proj_hidden = nn.Linear(2 * dim_feedforward, dim_feedforward)
-        # self.proj_last_state = nn.Linear(2 * dim_feedforward, dim_feedforward)
+        self.proj_last_state = nn.Linear(2 * dim_feedforward, dim_feedforward)
 
     def forward(self, inputs, length):
         '''batch中各个数据的维度是相同的
@@ -97,6 +97,14 @@ class TemplateEncoder(nn.Module):
         return hidden_state, last_state
 
 
+class CnnEncoder(nn.Module):
+    def __init__(self, modality, kernel, fea_size, dim_feedforward):
+        super(CnnEncoder, self).__init__()
+
+    def forward(self, inputs, length):
+        return None
+
+
 class UnimodalEncoder(nn.Module):
     def __init__(self, opt):
         super(UnimodalEncoder, self).__init__()
@@ -107,19 +115,29 @@ class UnimodalEncoder(nn.Module):
         # self.enc_bp = TransforEncoder(modality="bp", num_patches=opt.seq_lens[3], fea_size=300, dim_feedforward=512)
 
         # LSTM Encoder for learning sequential features
-        self.enc_au = TemplateEncoder(modality="au", num_layers=1, fea_size=300, dim_feedforward=512)
-        self.enc_em = TemplateEncoder(modality="em", num_layers=1, fea_size=300, dim_feedforward=512)
-        self.enc_hp = TemplateEncoder(modality="hp", num_layers=1, fea_size=300, dim_feedforward=512)
-        self.enc_bp = TemplateEncoder(modality="bp", num_layers=1, fea_size=300, dim_feedforward=512)
+        self.enc_au = TemplateEncoder(modality="au", num_layers=1, fea_size=300, dim_feedforward=256)
+        self.enc_em = TemplateEncoder(modality="em", num_layers=1, fea_size=300, dim_feedforward=256)
+        self.enc_hp = TemplateEncoder(modality="hp", num_layers=1, fea_size=300, dim_feedforward=256)
+        self.enc_bp = TemplateEncoder(modality="bp", num_layers=1, fea_size=300, dim_feedforward=256)
 
     def forward(self, au, em, hp, bp, mask, length):
-        # hidden_au = self.enc_au(au, mask['au'])
-        # hidden_em = self.enc_em(em, mask['em'])
-        # hidden_hp = self.enc_hp(hp, mask['hp'])
-        # hidden_bp = self.enc_bp(bp, mask['bp'])
-        hidden_au = self.enc_au(au, length['au'])
-        hidden_em = self.enc_em(em, length['em'])
-        hidden_hp = self.enc_hp(hp, length['hp'])
-        hidden_bp = self.enc_bp(bp, length['bp'])
+        hidden_au, last_au = self.enc_au(au, length['au'])
+        hidden_em, last_em = self.enc_em(em, length['em'])
+        hidden_hp, last_hp = self.enc_hp(hp, length['hp'])
+        hidden_bp, last_bp = self.enc_bp(bp, length['bp'])
 
-        return {'au': hidden_au, 'em': hidden_em, 'hp': hidden_hp, 'bp': hidden_bp}
+        hidden_status = {
+            'au': hidden_au,
+            'em': hidden_em,
+            'hp': hidden_hp,
+            'bp': hidden_bp
+        }
+        last_status = {
+            'au': last_au,
+            'em': last_em,
+            'hp': last_hp,
+            'bp': last_bp
+        }
+
+        # 获取每个模态token-level以及utterance-level的时间序列特征，一方面用于后续跨模态融合，另一方面直接用于映射到联合表征空间
+        return hidden_status, last_status
