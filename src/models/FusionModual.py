@@ -13,7 +13,7 @@ class FeedForward(nn.Module):
             nn.GELU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, dim),
-            nn.Dropout(dropout)
+            # nn.Dropout(dropout)
         )
 
     def forward(self, x):
