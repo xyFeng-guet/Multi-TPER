@@ -1,7 +1,12 @@
 import torch
 from torch import nn
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from models.EncoderModule import UnimodalEncoder
 from models.FusionModual import MultimodalFusion
+from models.iTransformer import iTransformer
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
 
 
 class TPER(nn.Module):
@@ -55,6 +60,52 @@ class SentiCLS(nn.Module):
         return output
 
 
+class LinearModel(nn.Module):
+    def __init__(self, fea_dim, n_class):
+        super(LinearModel, self).__init__()
+        self.cls_layer = nn.Sequential(
+            nn.Linear(fea_dim, fea_dim // 2),
+            # nn.GELU(),
+            nn.Linear(fea_dim // 2, n_class)
+        )
+
+    def forward(self, uni_fea):
+        for types in ['au', 'em', 'hp', 'bp']:
+            # uni_fea[types] = uni_fea[types].permute(0, 2, 1)
+            uni_fea[types] = torch.mean(uni_fea[types], dim=1)
+
+        joint_fea = torch.cat((uni_fea['au'], uni_fea['em'], uni_fea['hp'], uni_fea['bp']), dim=-1)
+        output = self.cls_layer(joint_fea)
+        return output
+
+
+class LSTMModel(nn.Module):
+    def __init__(self, fea_dim, layers, n_class):
+        super(LSTMModel, self).__init__()
+        self.rnn = nn.LSTM(input_size=fea_dim, hidden_size=fea_dim, num_layers=layers, bidirectional=True, dropout=0.1, batch_first=True)
+        self.proj_last_state = nn.Linear(2 * fea_dim, n_class)
+
+    def forward(self, uni_fea):
+        length = uni_fea['length']['au'] + uni_fea['length']['em'][0] + uni_fea['length']['hp'][0] + uni_fea['length']['bp'][0]
+        length = length.to('cpu').to(torch.int64)
+        joint_fea = torch.cat((uni_fea['au'], uni_fea['em'], uni_fea['hp'], uni_fea['bp']), dim=1)
+        packed_sequence = pack_padded_sequence(joint_fea, length, batch_first=True, enforce_sorted=False)  # input:输入数据 lengths:每条数据本身的长度（padding前）
+        packed_h, final_h_c_out = self.rnn(packed_sequence)
+        # padded_h, _ = pad_packed_sequence(packed_h, batch_first=True, total_length=length[0])
+        # hidden_state = self.proj_hidden(padded_h)
+
+        h_sent_out = final_h_c_out[0]
+        h_sent_seq = torch.cat((h_sent_out[0], h_sent_out[1]), dim=-1)
+        output = self.proj_last_state(h_sent_seq)
+        return output
+
+
 def build_model(opt):
     model = TPER(opt)
+    # model = LinearModel(fea_dim=353, n_class=opt.num_class)
+    # model = LSTMModel(fea_dim=300, layers=1, n_class=opt.num_class)
+    # model = iTransformer(num_class=opt.num_class)
+    # model = KNeighborsClassifier()
+    # model = RandomForestClassifier()
+    # model = SVC()
     return model

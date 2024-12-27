@@ -23,9 +23,9 @@ def get_args():
                         help='optimizer learning rate')
 
     # Dataset
-    parser.add_argument('--labelType', type=str, default='readiness',
+    parser.add_argument('--labelType', type=str, default='quality',
                         help='label type is one of quality / readiness / ra')
-    parser.add_argument('--num_class', type=int, default=2,
+    parser.add_argument('--num_class', type=int, default=3,
                         help='quality:3, ra:3, readiness:2')
     parser.add_argument('--data_path', type=str, default='ETTh1.csv',
                         help='data file')

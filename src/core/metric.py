@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from sklearn.metrics import f1_score
+from sklearn.metrics import precision_score, recall_score, f1_score
 
 
 class MetricsTop():
@@ -28,6 +28,8 @@ class MetricsTop():
         total = len(y_true)
         accuracy = correct / total
 
+        # precision = precision_score(y_true, predicted)
+        # recall = recall_score(y_true, predicted)
         f1 = f1_score(y_true, predicted, average='weighted')
 
         eval_results = {
