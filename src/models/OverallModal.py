@@ -19,7 +19,9 @@ class TPER(nn.Module):
         self.MultiFusion = MultimodalFusion(opt)
 
         # Classification Prediction
-        self.CLS = SentiCLS(fusion_dim=256*8, n_class=opt.num_class)
+        self.CLS1 = SentiCLS(fusion_dim=256*8, n_class=3)   # quality
+        self.CLS2 = SentiCLS(fusion_dim=256*8, n_class=3)   # ra
+        self.CLS3 = SentiCLS(fusion_dim=256*8, n_class=2)   # readiness
 
     def forward(self, input_data):
         au, em, hp, bp = input_data['au'], input_data['em'], input_data['hp'], input_data['bp']
@@ -33,22 +35,27 @@ class TPER(nn.Module):
         multi_fea = self.MultiFusion(uni_token)
 
         # Sentiment Classification
-        # prediction = self.CLS(multi_features)     # uni_fea['T'], uni_fea['V'], uni_fea['A']
-        prediction = self.CLS(uni_utterance, multi_fea)
+        prediction1 = self.CLS1(uni_utterance, multi_fea)
+        prediction2 = self.CLS2(uni_utterance, multi_fea)
+        prediction3 = self.CLS3(uni_utterance, multi_fea)
 
-        return prediction
+        return {'quality': prediction1, 'ra': prediction2, 'readiness': prediction3}
 
 
 class SentiCLS(nn.Module):
     def __init__(self, fusion_dim, n_class, classifier_dropout=0.1):
         super(SentiCLS, self).__init__()
-        self.cls_layer = nn.Sequential(
-            nn.GELU(),
-            nn.Dropout(p=classifier_dropout),
-            nn.Linear(fusion_dim, fusion_dim // 2),
-            nn.GELU(),
-            nn.Linear(fusion_dim // 2, n_class)
-        )
+        # self.cls_layer = nn.Sequential(
+        #     nn.GELU(),
+        #     nn.Dropout(p=classifier_dropout),
+        #     nn.Linear(fusion_dim, fusion_dim // 2),
+        #     nn.GELU(),
+        #     nn.Linear(fusion_dim // 2, n_class)
+        # )
+        self.linear1 = nn.Linear(fusion_dim, fusion_dim // 2)
+        self.linear2 = nn.Linear(fusion_dim // 2, n_class)
+        self.dropout = nn.Dropout(p=classifier_dropout)
+        self.activate = nn.GELU()
 
     def forward(self, uni_fea, multi_fea):
         multi_fea = torch.mean(multi_fea, dim=1)
@@ -56,7 +63,10 @@ class SentiCLS(nn.Module):
         #     multi_fea[Type] = torch.mean(multi_fea[Type], dim=1)
 
         joint_fea = torch.cat((uni_fea['au'], uni_fea['em'], uni_fea['hp'], uni_fea['bp'], multi_fea), dim=-1)
-        output = self.cls_layer(joint_fea)
+        # output = self.cls_layer(joint_fea)
+
+        output = self.linear1(self.dropout(self.activate(joint_fea)))
+        output = self.linear2(self.activate(output))
         return output
 
 
@@ -105,7 +115,7 @@ def build_model(opt):
     # model = LinearModel(fea_dim=353, n_class=opt.num_class)
     # model = LSTMModel(fea_dim=300, layers=1, n_class=opt.num_class)
     # model = iTransformer(num_class=opt.num_class)
-    # model = KNeighborsClassifier()
+    # model = KNeighborsClassifier(n_neighbors=3)
     # model = RandomForestClassifier()
     # model = SVC()
     return model

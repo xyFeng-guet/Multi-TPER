@@ -9,8 +9,8 @@ class create_Dataset():
             'emotake': self.__init_emotake,
             'other': None
         }
-        data, label = DATA_MAP[datasetNmae](labelType)
-        self.d_l = {'data': data, 'label': label}
+        data, multi_task, label = DATA_MAP[datasetNmae](labelType)
+        self.d_l = {'data': data, 'multi_task': multi_task, 'label': label}
 
     def __init_emotake(self, labelType):
         au_data = np.load('data/aus.npy').transpose(0, 2, 1)
@@ -29,6 +29,10 @@ class create_Dataset():
         readiness_label = np.load('data/readiness.npy', allow_pickle=True)
         readiness_label = np.array(readiness_label, dtype=int)
 
+        multi_task = []
+        for i in range(len(quality_label)):
+            multi_task.append([quality_label[i], ra_label[i], readiness_label[i]])
+
         if labelType == 'quality':
             combine_label = quality_label
         elif labelType == 'ra':
@@ -36,7 +40,7 @@ class create_Dataset():
         else:
             combine_label = readiness_label
 
-        return combine_data, combine_label
+        return combine_data, multi_task, combine_label
 
     def __len__(self):
         return len(self.dataset['label'])

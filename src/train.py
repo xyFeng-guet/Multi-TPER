@@ -43,21 +43,32 @@ def train(opt, model, dataset, optimizer, loss_fn, epoch, metrics):
                 'bp': data['bp_lengths'].to(device)
             }
         }
-        label = data['label'].to(device)
+        label = data['label'].to(device)    # quality ra readiness
+        qu, ra, re = [], [], []
+        for i in range(len(label)):
+            qu.append(label[i][0])
+            ra.append(label[i][1])
+            re.append(label[i][2])
+        label = {'quality': torch.tensor(qu).to(device), 'ra': torch.tensor(ra).to(device), 'readiness': torch.tensor(re).to(device)}
         batchsize = inputs['au'].shape[0]
 
         output = model(inputs)
+        # features = torch.mean(torch.cat((inputs['au'], inputs['bp'], inputs['em'], inputs['hp']), dim=1), dim=1)
+        # label = label[opt.labelType]
+        # model.fit(features, label)
 
-        loss_cla = loss_fn(output, label)
-        loss = loss_cla
+        loss_qu = loss_fn['quality'](output['quality'], label['quality'])
+        loss_ra = loss_fn['ra'](output['ra'], label['ra'])
+        loss_re = loss_fn['readiness'](output['readiness'], label['readiness'])
+        loss = 0.7 * loss_qu + 0.7 * loss_ra + 1 * loss_re
         losses.update(loss.item(), batchsize)
         loss.backward()
 
         optimizer.step()
         optimizer.zero_grad()
 
-        y_pred.append(output.cpu())
-        y_true.append(label.cpu())
+        y_pred.append(output[opt.labelType].cpu())
+        y_true.append(label[opt.labelType].cpu())
 
         train_pbar.set_description('train')
         train_pbar.set_postfix({
@@ -104,11 +115,13 @@ def test(opt, model, dataset, optimizer, loss_fn, epoch, metrics):
             batchsize = inputs['au'].shape[0]
 
             output = model(inputs)
+            # features = torch.mean(torch.cat((inputs['au'], inputs['bp'], inputs['em'], inputs['hp']), dim=1), dim=1)
+            # output = model.predict(features)
 
-            loss = loss_fn(output, label)
+            loss = loss_fn[opt.labelType](output[opt.labelType], label)
             losses.update(loss.item(), batchsize)
 
-            y_pred.append(output.cpu())
+            y_pred.append(output[opt.labelType].cpu())
             y_true.append(label.cpu())
 
             test_pbar.set_description('test')
@@ -144,9 +157,11 @@ def main(parse_args):
     kf = StratifiedKFold(n_splits=5, shuffle=True)
     for train_index, test_index in kf.split(dataset['data'], dataset['label']):
         X_train = np.array(dataset['data'])[train_index]
-        Y_train = np.array(dataset['label'])[train_index]
+        Y_train = np.array(dataset['multi_task'])[train_index]
+        # Y_train = np.array(dataset['label'])[train_index]
 
         X_test = np.array(dataset['data'])[test_index]
+        # Multi_test = np.array(dataset['multi_task'])[test_index]
         Y_test = np.array(dataset['label'])[test_index]
 
         model = build_model(opt).to(device)
@@ -156,7 +171,7 @@ def main(parse_args):
             weight_decay=opt.weight_decay
         )
 
-        loss_fn = torch.nn.CrossEntropyLoss()
+        loss_fn = {'quality': torch.nn.CrossEntropyLoss(), 'ra': torch.nn.CrossEntropyLoss(), 'readiness': torch.nn.CrossEntropyLoss()}
         metrics = MetricsTop().getMetics(opt.datasetName)
         scheduler_warmup = get_scheduler(optimizer, opt.epochs)
 
