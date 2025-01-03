@@ -115,10 +115,10 @@ class UnimodalEncoder(nn.Module):
         # self.enc_bp = TransforEncoder(modality="bp", num_patches=opt.seq_lens[3], fea_size=300, dim_feedforward=512)
 
         # LSTM Encoder for learning sequential features
-        self.enc_au = TemplateEncoder(modality="au", num_layers=1, fea_size=300, dim_feedforward=256)
-        self.enc_em = TemplateEncoder(modality="em", num_layers=1, fea_size=300, dim_feedforward=256)
-        self.enc_hp = TemplateEncoder(modality="hp", num_layers=1, fea_size=300, dim_feedforward=256)
-        self.enc_bp = TemplateEncoder(modality="bp", num_layers=1, fea_size=300, dim_feedforward=256)
+        self.enc_au = TemplateEncoder(modality="au", num_layers=1, fea_size=35, dim_feedforward=256)
+        self.enc_em = TemplateEncoder(modality="em", num_layers=1, fea_size=288, dim_feedforward=256)
+        self.enc_hp = TemplateEncoder(modality="hp", num_layers=1, fea_size=6, dim_feedforward=256)
+        self.enc_bp = TemplateEncoder(modality="bp", num_layers=1, fea_size=24, dim_feedforward=256)
 
     def forward(self, au, em, hp, bp, mask, length):
         hidden_au, last_au = self.enc_au(au, length['au'])

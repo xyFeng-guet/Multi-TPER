@@ -76,16 +76,21 @@ class MultimodalFusion(nn.Module):
     def __init__(self, opt):
         super(MultimodalFusion, self).__init__()
         # Length Align
-        self.len_au = nn.Linear(opt.seq_lens[0], 8)
-        self.len_em = nn.Linear(opt.seq_lens[1], 8)
-        self.len_hp = nn.Linear(opt.seq_lens[2], 8)
-        self.len_bp = nn.Linear(opt.seq_lens[3], 8)
+        # self.len_au = nn.Linear(opt.seq_lens[0], 8)
+        # self.len_em = nn.Linear(opt.seq_lens[1], 8)
+        # self.len_hp = nn.Linear(opt.seq_lens[2], 8)
+        # self.len_bp = nn.Linear(opt.seq_lens[3], 8)
+        self.len_au = nn.Linear(300, 16)
+        self.len_em = nn.Linear(300, 16)
+        self.len_hp = nn.Linear(300, 16)
+        self.len_bp = nn.Linear(300, 16)
 
         # 初始化迭代融合模块
         # fusion_block = DynFusBlock(opt)
         # self.dec_list = self._get_clones(fusion_block, 3)
         self.crotras1 = CrossTransformer(dim=1024, mlp_dim=1024, dropout=0.1)
         self.crotras2 = CrossTransformer(dim=1024, mlp_dim=1024, dropout=0.1)
+        self.crotras3 = CrossTransformer(dim=1024, mlp_dim=1024, dropout=0.1)
 
     def forward(self, uni_fea, uni_mask=None):
         hidden_au = self.len_au(uni_fea['au'].permute(0, 2, 1)).permute(0, 2, 1)
@@ -96,6 +101,7 @@ class MultimodalFusion(nn.Module):
 
         target = self.crotras1(target, target)
         target = self.crotras2(target, target)
+        target = self.crotras3(target, target)
 
         # source = hidden_au  # 进行渐进式融合，首先将其中一个模态作为融合模块的输入，即第一个融合源数据
         # other_hidden = [hidden_em, hidden_hp, hidden_bp]

@@ -60,7 +60,7 @@ def train(opt, model, dataset, optimizer, loss_fn, epoch, metrics):
         loss_qu = loss_fn['quality'](output['quality'], label['quality'])
         loss_ra = loss_fn['ra'](output['ra'], label['ra'])
         loss_re = loss_fn['readiness'](output['readiness'], label['readiness'])
-        loss = 0.7 * loss_qu + 0.7 * loss_ra + 1 * loss_re
+        loss = 0.2 * loss_qu + 0.2 * loss_ra + 1 * loss_re
         losses.update(loss.item(), batchsize)
         loss.backward()
 

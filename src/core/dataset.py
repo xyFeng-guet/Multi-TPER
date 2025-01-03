@@ -13,12 +13,18 @@ class create_Dataset():
         self.d_l = {'data': data, 'multi_task': multi_task, 'label': label}
 
     def __init_emotake(self, labelType):
-        au_data = np.load('data/aus.npy').transpose(0, 2, 1)
-        em_data = np.load('data/ems.npy').transpose(0, 2, 1)
-        hp_data = np.load('data/hps.npy').transpose(0, 2, 1)
+        # au_data = np.load('data/aus.npy').transpose(0, 2, 1)
+        # em_data = np.load('data/ems.npy').transpose(0, 2, 1)
+        # hp_data = np.load('data/hps.npy').transpose(0, 2, 1)
+        au_data = np.load('data/aus.npy')
+        em_data = np.load('data/ems.npy')
+        hp_data = np.load('data/hps.npy')
 
+        # Body Poster 的维度是 batch，lenght，point1，point2
+        # 300 12 2 中的 12 2 代表的是每个图片提取出了12个点，2是每个点的横纵坐标
         bp_data = np.load('data/bps.npy')
-        bp_data = bp_data.reshape(bp_data.shape[0], bp_data.shape[1], -1).transpose(0, 2, 1)
+        # bp_data = bp_data.reshape(bp_data.shape[0], bp_data.shape[1], -1).transpose(0, 2, 1)
+        bp_data = bp_data.reshape(bp_data.shape[0], bp_data.shape[1], -1)
 
         combine_data = [{'au': au_data[i], 'em': em_data[i], 'hp': hp_data[i], 'bp': bp_data[i]} for i in range(len(au_data))]
 
